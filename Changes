@@ -1,0 +1,6 @@
+Revision history for AnyEvent-Handle-UDP
+
+0.01     Sun May 16 11:37:44 CEST 2010
+       * Add support for "listen" in constructor
+       * Add list for non-supported arguments in constructor
+

@@ -1,0 +1,31 @@
+---
+abstract: 'AnyEvent::Handle for client/server UDP sockets'
+author:
+  - 'Jan Henning Thorsen, all rights reserved.'
+build_requires:
+  ExtUtils::MakeMaker: 6.42
+  Test::More: 0.9
+configure_requires:
+  ExtUtils::MakeMaker: 6.42
+distribution_type: module
+generated_by: 'Module::Install version 0.95'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: AnyEvent-Handle-UDP
+no_index:
+  directory:
+    - inc
+    - t
+requires:
+  AnyEvent: 5.26
+  Carp: 1
+  Errno: 1
+  IO::Socket::INET: 1.2
+resources:
+  bugtracker: http://rt.cpan.org/NoAuth/Bugs.html?Dist=AnyEvent-Handle-UDP
+  homepage: http://search.cpan.org/dist/AnyEvent-Handle-UDP
+  license: http://dev.perl.org/licenses/
+  repository: git://github.com/jhthorsen/anyevent-handle-udp.git
+version: 0.01

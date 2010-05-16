@@ -1,0 +1,75 @@
+NAME
+    AnyEvent::Handle::UDP - AnyEvent::Handle for client/server UDP sockets
+
+VERSION
+    0.01
+
+DESCRIPTION
+    This module will add support for UDP connections with AnyEvent.
+
+SYNOPSIS
+      use AnyEvent::Handle::UDP;
+
+      my $udp = AnyEvent::Handle::UDP->new(
+                    listen => 'localhost:12345',
+                    read_size => 512,
+                    on_read => sub {
+                        my $handle = shift;
+                        print "packet=", $handle->rbuf, "\n";
+                        $handle->{'rbuf'} = '';
+                    },
+                );
+
+ATTRIBUTES
+  socket
+    Holds an IO::Socket::INET object, representing the connection.
+
+  peername
+    Proxy method for IO::Socket::INET::peername.
+
+  peerhost
+    Proxy method for IO::Socket::INET::peerhost.
+
+  peerport
+    Proxy method for IO::Socket::INET::peerport.
+
+  sockname
+    Proxy method for IO::Socket::INET::sockname.
+
+  sockhost
+    Proxy method for IO::Socket::INET::sockhost.
+
+  sockport
+    Proxy method for IO::Socket::INET::sockport.
+
+METHODS
+  new
+    The constructor supports the same arguments as AnyEvent::Handle::new(),
+    except: tls*.
+
+    To create a listener:
+
+     AnyEvent::Handle::UDP->new(
+        listen => "$host:$port",
+     );
+
+    Not yet implemented: "connect".
+
+    Does not make any sense for UDP: "on_prepare", "on_connect",
+    "on_connect_error", "keepalive", "oobinline" and "on_eof".
+
+  start_read
+    See AnyEvent::Handle::start_read(). This method is a modified version
+    which use "recv()" on the socket instead of "sysread()". The peer data
+    is available inside "on_read()", but must be stored away, since it will
+    be overwritten on next "recv()".
+
+COPYRIGHT & LICENSE
+    Copyright 2007 Jan Henning Thorsen, all rights reserved.
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
+AUTHOR
+    Jan Henning Thorsen "jhthorsen at cpan.org"
+
