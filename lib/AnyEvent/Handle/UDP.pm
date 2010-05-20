@@ -6,11 +6,14 @@ AnyEvent::Handle::UDP - AnyEvent::Handle for client/server UDP sockets
 
 =head1 VERSION
 
-0.01
+0.02
 
 =head1 DESCRIPTION
 
-This module will add support for UDP connections with L<AnyEvent>.
+I suddenly decided to leave any L<AnyEvent> code (including
+L<AnyEvent::TFTPd>), due to a community and development model that
+is indeed very hard to work with. If you want this module, please
+drop me mail and I'll hand over the maintenance.
 
 =head1 SYNOPSIS
 
@@ -36,7 +39,7 @@ use Errno qw(EAGAIN EINTR);
 use AnyEvent::Util qw(WSAEWOULDBLOCK);
 use base 'AnyEvent::Handle';
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 ATTRIBUTES
 

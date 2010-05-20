@@ -1,5 +1,9 @@
 Revision history for AnyEvent-Handle-UDP
 
+0.02     Fri May 21 00:08:50 CEST 2010
+       * Decided to leave AnyEvent
+       * Try to fix http://www.cpantesters.org/cpan/report/7272454
+
 0.01     Sun May 16 11:37:44 CEST 2010
        * Add support for "listen" in constructor
        * Add list for non-supported arguments in constructor

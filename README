@@ -2,10 +2,13 @@ NAME
     AnyEvent::Handle::UDP - AnyEvent::Handle for client/server UDP sockets
 
 VERSION
-    0.01
+    0.02
 
 DESCRIPTION
-    This module will add support for UDP connections with AnyEvent.
+    I suddenly decided to leave any AnyEvent code (including
+    AnyEvent::TFTPd), due to a community and development model that is
+    indeed very hard to work with. If you want this module, please drop me
+    mail and I'll hand over the maintenance.
 
 SYNOPSIS
       use AnyEvent::Handle::UDP;

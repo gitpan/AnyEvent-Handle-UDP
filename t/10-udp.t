@@ -15,9 +15,9 @@ eval { $udp = AnyEvent::Handle::UDP->new(connect => 'foo') };
 like($@, qr{not implemented}, 'connect => "foo" is not implemented');
 
 eval { $udp = AnyEvent::Handle::UDP->new() };
-like($@, qr{is required}, 'missing arugments to new');
+like($@, qr{is required}, 'missing arguments to new');
 
-eval { $udp = AnyEvent::Handle::UDP->new(listen => 'foo') };
+eval { $udp = AnyEvent::Handle::UDP->new(listen => '!"#¤%&/()=') };
 like($@, qr{IO::Socket::INET}, 'listen => foo is invalid');
 
 eval { $udp = AnyEvent::Handle::UDP->new(listen => 'localhost:61234') };
