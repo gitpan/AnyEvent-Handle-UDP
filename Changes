@@ -1,5 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
+0.03     Sun Jun 13 17:27:27 CEST 2010
+       * Sabotaged by MLEHMANN.
+
 0.02     Fri May 21 00:08:50 CEST 2010
        * Decided to leave AnyEvent
        * Try to fix http://www.cpantesters.org/cpan/report/7272454
