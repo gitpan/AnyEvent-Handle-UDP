@@ -1,209 +1,293 @@
 package AnyEvent::Handle::UDP;
+{
+  $AnyEvent::Handle::UDP::VERSION = '0.001';
+}
+use strict;
+use warnings FATAL => 'all';
+
+use Moo;
+
+use AnyEvent qw//;
+use AnyEvent::Util qw/fh_nonblocking/;
+use AnyEvent::Socket qw//;
+
+use Carp qw/croak/;
+use Const::Fast qw/const/;
+use Errno qw/EAGAIN EWOULDBLOCK/;
+use Scalar::Util qw/reftype looks_like_number/;
+use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM/;
+use Symbol qw/gensym/;
+
+use namespace::clean;
+
+const my $default_recv_size => 1500;
+
+has fh => (
+	is => 'ro',
+	default => sub { gensym() },
+);
+
+has _bind_addr => (
+	is => 'ro',
+	init_arg => 'bind',
+	predicate => '_has_bind_addr',
+);
+
+has _connect_addr => (
+	is => 'ro',
+	init_arg => 'connect',
+	predicate => '_has_connect_addr',
+);
+
+sub BUILD {
+	my $self = shift;
+	$self->bind_to($self->_bind_addr) if $self->_has_bind_addr;
+	$self->connect_to($self->_connect_addr) if $self->_has_connect_addr;
+	return;
+}
+
+has on_recv => (
+	is => 'rw',
+	isa => sub { reftype($_[0]) eq 'CODE' },
+	required => 1,
+);
+
+has on_error => (
+	is => 'rw',
+	isa => sub { reftype($_[0]) eq 'CODE' },
+	predicate => '_has_error_handler',
+);
+
+has receive_size => (
+	is => 'rw',
+	isa => sub { int $_[0] eq $_[0] },
+	default => sub { $default_recv_size },
+);
+
+has family => (
+	is => 'ro',
+	isa => sub { int $_[0] eq $_[0] },
+	default => sub { 0 },
+);
+
+has _full => (
+	is => 'rw',
+	predicate => '_has_full',
+);
+
+sub bind_to {
+	my ($self, $addr) = @_;
+	if (ref $addr) {
+		my ($host, $port) = @{$addr};
+		_on_addr($self, $host, $port, sub {
+			bind $self->{fh}, $_[0] or $self->_error(1, "Could not bind: $!");
+			setsockopt $self->{fh}, SOL_SOCKET, SO_REUSEADDR, 1 or $self->_error($!, 1, "Couldn't set so_reuseaddr: $!");
+		});
+	}
+	else {
+		bind $self->{fh}, $addr or $self->_error(1, "Could not bind: $!");
+		setsockopt $self->{fh}, SOL_SOCKET, SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!");
+	}
+	return;
+}
+
+sub connect_to {
+	my ($self, $addr) = @_;
+	if (ref $addr) {
+		my ($host, $port) = @{$addr};
+		_on_addr($self, $host, $port, sub { connect $self->{fh}, $_[0] or $self->_error(1, "Could not connect: $!") });
+	}
+	else {
+		connect $self->{fh}, $addr or $self->_error(1, "Could not connect: $!")
+	}
+	return;
+}
+
+sub _on_addr {
+	my ($self, $host, $port, $on_success) = @_;
+
+	AnyEvent::Socket::resolve_sockaddr($host, $port, 'udp', $self->family, SOCK_DGRAM, sub {
+		my @targets = @_;
+		while (1) {
+			my $target = shift @targets or $self->_error(1, "No such host '$host' or port '$port'");
+	 
+			my ($domain, $type, $proto, $sockaddr) = @{$target};
+			my $full = join ':', $domain, $type, $proto;
+			if ($self->_has_full) {
+				return redo if $self->_full ne $full;
+			}
+			else {
+				socket $self->fh, $domain, $type, $proto or redo;
+				fh_nonblocking $self->fh, 1;
+				$self->_full($full);
+			}
+
+			$on_success->($sockaddr);
+
+			$self->{reader} = AE::io $self->fh, 0, sub {
+				while (defined (my $addr = recv $self->fh, my ($buffer), $self->{receive_size}, 0)) {
+					$self->{on_recv}($buffer, $self, $addr);
+				}
+				$self->_error(1, "Couldn't recv: $!") if $! != EAGAIN and $! != EWOULDBLOCK;
+				return;
+			};
+
+			last;
+		}
+	});
+	return;
+}
+
+sub _error {
+	my ($self, $fatal, $message) = @_;
+
+	if ($self->_has_error_handler) {
+		$self->on_error->($self, $fatal, $message);
+		$self->destroy if $fatal;
+	} else {
+		$self->destroy;
+		croak "AnyEvent::Handle uncaught error: $message";
+	}
+	return;
+}
+
+sub push_send {
+	my ($self, $message, $to) = @_;
+	my $ret = $self->_send();
+	$self->_push_writer($message, $to) if not defined $ret and ($! == EAGAIN or $! == EWOULDBLOCK);
+	return;
+}
+
+sub _send {
+	my ($self, $message, $to) = @_;
+	my $ret = defined $to ? send $self->{fh}, $message, 0, $to : send $self->{fh}, $message, 0;
+	$self->on_error->($self->{fh}, 1, "$!") if not defined $ret and ($! != EAGAIN and $! != EWOULDBLOCK);
+	return $ret;
+}
+
+sub _push_writer {
+	my ($self, $message, $to) = @_;
+	push @{$self->{buffers}}, [ $message, $to ];
+	$self->{writer} ||= AE::io $self->{fh}, 1, sub {
+		if (@{$self->{buffers}}) {
+			while (my $msg = shift @{$self->{buffers}}) {
+				if (not defined $self->_send(@{$msg})) {
+					unshift @{$self->{buffers}}, $msg;
+					last;
+				}
+			}
+		}
+		else {
+			delete $self->{writer};
+		}
+	};
+	return;
+}
+
+sub destroy {
+	my $self = shift;
+	%{$self} = ();
+	return;
+}
+
+1;
+
+
+
+=pod
 
 =head1 NAME
 
-AnyEvent::Handle::UDP - AnyEvent::Handle for client/server UDP sockets
+AnyEvent::Handle::UDP - client/server UDP handles for AnyEvent
 
 =head1 VERSION
 
-0.03
+version 0.001
 
 =head1 DESCRIPTION
 
-I suddenly decided to leave any L<AnyEvent> code (including
-L<AnyEvent::TFTPd>), due to a community and development model that
-is indeed very hard to work with. If you want this module, please
-drop me mail and I'll hand over the maintenance.
-
-Update: L<AnyEvent::Handle> states:
-
-    # too many clueless people try to use udp and similar sockets
-    # with AnyEvent::Handle, do them a favour.
-
-So instead of hacking the source of L<AnyEvent> I'm simply abandoning
-this ship.
-
-=head1 SYNOPSIS
-
-  use AnyEvent::Handle::UDP;
-
-  my $udp = AnyEvent::Handle::UDP->new(
-                listen => 'localhost:12345',
-                read_size => 512,
-                on_read => sub {
-                    my $handle = shift;
-                    print "packet=", $handle->rbuf, "\n";
-                    $handle->{'rbuf'} = '';
-                },
-            );
-
-=cut
-
-use strict;
-# use warnings; ?!
-use Carp qw/confess/;
-use IO::Socket::INET;
-use Errno qw(EAGAIN EINTR);
-use AnyEvent::Util qw(WSAEWOULDBLOCK);
-use base 'AnyEvent::Handle';
-
-our $VERSION = '0.03';
+This module is an abstraction around UDP sockets for use with AnyEvent.
 
 =head1 ATTRIBUTES
 
-=head2 socket
+=head2 on_recv
 
-Holds an L<IO::Socket::INET> object, representing the connection.
+The callback for when a package arrives. It takes three arguments: the datagram, the handle and the address the datagram was received from.
 
-=head2 peername
+=head2 on_error
 
-Proxy method for L<IO::Socket::INET::peername>.
+The callback for when an error occurs. It takes three arguments: the handle, a boolean indicating the error is fatal or not, and the error message.
 
-=head2 peerhost
+=head2 receive_size
 
-Proxy method for L<IO::Socket::INET::peerhost>.
+The buffer size for the receiving in bytes. It defaults to 1500, which is slightly more than the MTA on ethernet.
 
-=head2 peerport
+=head2 family
 
-Proxy method for L<IO::Socket::INET::peerport>.
+Sets the socket family. The default is C<0>, which means either IPv4 or IPv6. The values C<4> and C<6> mean IPv4 and IPv6 respectively.
 
-=head2 sockname
+=head2 fh
 
-Proxy method for L<IO::Socket::INET::sockname>.
-
-=head2 sockhost
-
-Proxy method for L<IO::Socket::INET::sockhost>.
-
-=head2 sockport
-
-Proxy method for L<IO::Socket::INET::sockport>.
-
-=cut
-
-sub socket { $_[0]->{'fh'} }
-sub peername { $_[0]->{'fh'}->peername }
-sub peerhost { $_[0]->{'fh'}->peerhost }
-sub peerport { $_[0]->{'fh'}->peerport }
-sub sockname { $_[0]->{'fh'}->sockname }
-sub sockhost { $_[0]->{'fh'}->sockhost }
-sub sockport { $_[0]->{'fh'}->sockport }
+The underlying filehandle.
 
 =head1 METHODS
 
 =head2 new
 
-The constructor supports the same arguments as
-L<AnyEvent::Handle::new()>, except: tls*.
+Create a new UDP handle. As arguments it accepts any attribute, as well as these two:
 
-To create a listener:
+=over 4
 
- AnyEvent::Handle::UDP->new(
-    listen => "$host:$port",
- );
+=item * connect
 
-Not yet implemented: C<connect>.
+Set the address to which datagrams are sent by default, and the only address from which datagrams are received. It must be either a packed sockaddr struct or an arrayref containing a hostname and a portnumber.
 
-Does not make any sense for UDP: C<on_prepare>, C<on_connect>,
-C<on_connect_error>, C<keepalive>, C<oobinline> and C<on_eof>.
+=item * bind
 
-=cut
+The address to bind the socket to. It must be either a packed sockaddr struct or an arrayref containing a hostname and a portnumber.
 
+=back
 
-sub new {
-    my $class = shift;
-    my $self = bless { @_ }, $class;
+All are optional, though using either C<connect> or C<bind> (or both) is strongly recommended unless you give it a connected/bound C<fh>.
 
-    my @not_supported = qw/
-        on_prepare on_connect on_connect_error on_eof oobinline keepalive
-        tls tls_ctx on_starttls on_stoptls
-    /;
+=head2 bind_to($address)
 
-    for my $k (@not_supported) {
-        if($self->{$k}) {
-            confess "Argument ($k) is invalid";
-            return;
-        }
-    }
+Bind to the specified addres. Note that a bound socket may be rebound to another address. C<$address> must be in the same form as the bind argument to new.
 
-    $self->{'read_size'} ||= 8192;
+=head2 connect_to($address)
 
-    unless($self->{'fh'}) {
-        if($self->{'listen'}) {
-            $self->{'fh'} = IO::Socket::INET->new(
-                                LocalAddr => $self->{'listen'},
-                                Proto => 'udp',
-                                Blocking => 0,
-                            ) or confess $@;
-        }
-        elsif($self->{'connect'}) {
-            confess 'Argument (connect) is not implemented';
-            return;
-        }
-        else {
-            confess 'Argument (listen|connect) is required';
-            return;
-        }
-    }
+Connect to the specified address. Note that a connected socket may be reconnected to another address. C<$address> must be in the same form as the connect argument to new.
 
-    $self->_start;
+=head2 push_send($message, $to?)
 
-    return $self;
-}
+Try to send a message. If a socket is not connected a receptient address must also be given. It is connected giving a receptient may not work as expected, depending on your platform.
 
-=head2 start_read
+=head2 destroy
 
-See L<AnyEvent::Handle::start_read()>. This method is a modified version
-which use C<recv()> on the socket instead of C<sysread()>.
-The peer data is available inside C<on_read()>, but must be stored away,
-since it will be overwritten on next C<recv()>.
+Destroy the handle.
 
-=cut
+=head1 BACKWARDS COMPATIBILITY
 
-sub start_read {
-   my $self = shift;
+This module is B<not> backwards compatible in any way with the previous module of the same name by Jan Henning Thorsen. That module was broken by AnyEvent itself and now considered defunct.
 
-   unless($self->{'_rw'} or $self->{'_eof'} or !$self->{'fh'}) {
-        Scalar::Util::weaken($self);
-
-        $self->{'_rw'} = AE::io $self->{'fh'}, 0, sub {
-            my $rbuf = \$self->{'rbuf'};
-            my $peer = $self->{'fh'}->recv($$rbuf, $self->{'read_size'}, length $$rbuf);
-            my $len;
-
-            unless(defined $peer) {
-                return;
-            }
-
-            $len = length $$rbuf;
-
-            if($len > 0) {
-                $self->{'_activity'} = $self->{'_ractivity'} = AE::now;
-                $self->_drain_rbuf;
-            }
-            elsif(defined $len) {
-                delete $self->{'_rw'};
-                $self->{'_eof'} = 1;
-                $self->_drain_rbuf;
-            }
-            elsif($! != EAGAIN && $! != EINTR && $! != WSAEWOULDBLOCK) {
-                return $self->_error($!, 1);
-            }
-        };
-    }
-}
-
-=head1 COPYRIGHT & LICENSE
-
-Copyright 2007 Jan Henning Thorsen, all rights reserved.
-
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+=for Pod::Coverage BUILD
+=end
 
 =head1 AUTHOR
 
-Jan Henning Thorsen C<< jhthorsen at cpan.org >>
+Leon Timmermans <leont@cpan.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2011 by Leon Timmermans.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =cut
 
-1;
+
+__END__
+
+# ABSTRACT: client/server UDP handles for AnyEvent
+
