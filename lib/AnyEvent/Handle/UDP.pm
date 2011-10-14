@@ -1,6 +1,6 @@
 package AnyEvent::Handle::UDP;
 {
-  $AnyEvent::Handle::UDP::VERSION = '0.001';
+  $AnyEvent::Handle::UDP::VERSION = '0.031';
 }
 use strict;
 use warnings FATAL => 'all';
@@ -202,7 +202,7 @@ AnyEvent::Handle::UDP - client/server UDP handles for AnyEvent
 
 =head1 VERSION
 
-version 0.001
+version 0.031
 
 =head1 DESCRIPTION
 
