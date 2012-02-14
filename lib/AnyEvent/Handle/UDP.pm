@@ -1,6 +1,6 @@
 package AnyEvent::Handle::UDP;
 {
-  $AnyEvent::Handle::UDP::VERSION = '0.031';
+  $AnyEvent::Handle::UDP::VERSION = '0.032';
 }
 use strict;
 use warnings FATAL => 'all';
@@ -50,6 +50,14 @@ has on_recv => (
 	is => 'rw',
 	isa => sub { reftype($_[0]) eq 'CODE' },
 	required => 1,
+);
+
+has on_drain => (
+	is => 'rw',
+	isa => sub { reftype($_[0]) eq 'CODE' },
+	default => sub {
+		return sub {};
+	},
 );
 
 has on_error => (
@@ -153,35 +161,46 @@ sub _error {
 
 sub push_send {
 	my ($self, $message, $to) = @_;
-	my $ret = $self->_send();
-	$self->_push_writer($message, $to) if not defined $ret and ($! == EAGAIN or $! == EWOULDBLOCK);
-	return;
+	my $cv = AnyEvent::CondVar->new;
+	if (!$self->{writer}) {
+		my $ret = $self->_send($message, $to, $cv);
+		$self->_push_writer($message, $to, $cv) if not defined $ret and ($! == EAGAIN or $! == EWOULDBLOCK);
+		$self->on_drain->($self) if $ret;
+	}
+	else {
+		$self->_push_writer($message, $to, $cv);
+	}
+	return $cv;
 }
 
 sub _send {
-	my ($self, $message, $to) = @_;
+	my ($self, $message, $to, $cv) = @_;
 	my $ret = defined $to ? send $self->{fh}, $message, 0, $to : send $self->{fh}, $message, 0;
 	$self->on_error->($self->{fh}, 1, "$!") if not defined $ret and ($! != EAGAIN and $! != EWOULDBLOCK);
+	$cv->($ret) if defined $ret;
 	return $ret;
 }
 
 sub _push_writer {
-	my ($self, $message, $to) = @_;
-	push @{$self->{buffers}}, [ $message, $to ];
+	my ($self, $message, $to, $condvar) = @_;
+	push @{$self->{buffers}}, [ $message, $to, $condvar ];
 	$self->{writer} ||= AE::io $self->{fh}, 1, sub {
 		if (@{$self->{buffers}}) {
-			while (my $msg = shift @{$self->{buffers}}) {
-				if (not defined $self->_send(@{$msg})) {
+			while (my ($msg, $to, $cv) = shift @{$self->{buffers}}) {
+				my $ret = $self->_send(@{$msg}, $to, $cv);
+				if (not defined $ret) {
 					unshift @{$self->{buffers}}, $msg;
+					$self->on_error->($self->{fh}, 1, "$!") if $! != EAGAIN and $! != EWOULDBLOCK;
 					last;
 				}
 			}
 		}
 		else {
 			delete $self->{writer};
+			$self->on_drain->($self);
 		}
 	};
-	return;
+	return $condvar;
 }
 
 sub destroy {
@@ -191,6 +210,8 @@ sub destroy {
 }
 
 1;
+
+# ABSTRACT: client/server UDP handles for AnyEvent
 
 
 
@@ -202,7 +223,7 @@ AnyEvent::Handle::UDP - client/server UDP handles for AnyEvent
 
 =head1 VERSION
 
-version 0.031
+version 0.032
 
 =head1 DESCRIPTION
 
@@ -217,6 +238,10 @@ The callback for when a package arrives. It takes three arguments: the datagram,
 =head2 on_error
 
 The callback for when an error occurs. It takes three arguments: the handle, a boolean indicating the error is fatal or not, and the error message.
+
+=head2 on_drain
+
+This sets the callback that is called when the send buffer becomes empty. The callback takes the handle as its only argument.
 
 =head2 receive_size
 
@@ -260,7 +285,7 @@ Connect to the specified address. Note that a connected socket may be reconnecte
 
 =head2 push_send($message, $to?)
 
-Try to send a message. If a socket is not connected a receptient address must also be given. It is connected giving a receptient may not work as expected, depending on your platform.
+Try to send a message. If a socket is not connected a receptient address must also be given. If it is connected giving a receptient may not work as expected, depending on your platform.
 
 =head2 destroy
 
@@ -288,6 +313,4 @@ the same terms as the Perl 5 programming language system itself.
 
 
 __END__
-
-# ABSTRACT: client/server UDP handles for AnyEvent
 
