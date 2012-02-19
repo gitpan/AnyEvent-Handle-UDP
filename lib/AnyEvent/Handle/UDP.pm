@@ -1,6 +1,6 @@
 package AnyEvent::Handle::UDP;
 {
-  $AnyEvent::Handle::UDP::VERSION = '0.032';
+  $AnyEvent::Handle::UDP::VERSION = '0.033';
 }
 use strict;
 use warnings FATAL => 'all';
@@ -13,7 +13,7 @@ use AnyEvent::Socket qw//;
 
 use Carp qw/croak/;
 use Const::Fast qw/const/;
-use Errno qw/EAGAIN EWOULDBLOCK/;
+use Errno qw/EAGAIN EWOULDBLOCK EINTR/;
 use Scalar::Util qw/reftype looks_like_number/;
 use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM/;
 use Symbol qw/gensym/;
@@ -43,6 +43,7 @@ sub BUILD {
 	my $self = shift;
 	$self->bind_to($self->_bind_addr) if $self->_has_bind_addr;
 	$self->connect_to($self->_connect_addr) if $self->_has_connect_addr;
+	$self->_drained;
 	return;
 }
 
@@ -55,10 +56,19 @@ has on_recv => (
 has on_drain => (
 	is => 'rw',
 	isa => sub { reftype($_[0]) eq 'CODE' },
-	default => sub {
-		return sub {};
+	required => 0,
+	predicate => '_has_on_drain',
+	clearer => 'clear_on_drain',
+	trigger => sub {
+		my ($self, $callback) = @_;
+		$self->_drained if not @{ $self->{buffers} };
 	},
 );
+
+sub _drained {
+	my $self = shift;
+	$self->on_drain->($self) if $self->_has_on_drain
+}
 
 has on_error => (
 	is => 'rw',
@@ -81,6 +91,11 @@ has family => (
 has _full => (
 	is => 'rw',
 	predicate => '_has_full',
+);
+
+has autoflush => (
+	is => 'rw',
+	default => sub { 0 },
 );
 
 sub bind_to {
@@ -159,13 +174,15 @@ sub _error {
 	return;
 }
 
+my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
+
 sub push_send {
-	my ($self, $message, $to) = @_;
-	my $cv = AnyEvent::CondVar->new;
-	if (!$self->{writer}) {
+	my ($self, $message, $to, $cv) = @_;
+	$cv ||= defined wantarray ? AnyEvent::CondVar->new : undef;
+	if ($self->autoflush and ! @{ $self->{buffers} }) {
 		my $ret = $self->_send($message, $to, $cv);
-		$self->_push_writer($message, $to, $cv) if not defined $ret and ($! == EAGAIN or $! == EWOULDBLOCK);
-		$self->on_drain->($self) if $ret;
+		$self->_push_writer($message, $to, $cv) if not defined $ret and $non_fatal{$! + 0};
+		$self->_drained if $ret;
 	}
 	else {
 		$self->_push_writer($message, $to, $cv);
@@ -176,8 +193,8 @@ sub push_send {
 sub _send {
 	my ($self, $message, $to, $cv) = @_;
 	my $ret = defined $to ? send $self->{fh}, $message, 0, $to : send $self->{fh}, $message, 0;
-	$self->on_error->($self->{fh}, 1, "$!") if not defined $ret and ($! != EAGAIN and $! != EWOULDBLOCK);
-	$cv->($ret) if defined $ret;
+	$self->on_error->($self->{fh}, 1, "$!") if not defined $ret and !$non_fatal{$! + 0};
+	$cv->($ret) if defined $cv and defined $ret;
 	return $ret;
 }
 
@@ -185,19 +202,20 @@ sub _push_writer {
 	my ($self, $message, $to, $condvar) = @_;
 	push @{$self->{buffers}}, [ $message, $to, $condvar ];
 	$self->{writer} ||= AE::io $self->{fh}, 1, sub {
-		if (@{$self->{buffers}}) {
-			while (my ($msg, $to, $cv) = shift @{$self->{buffers}}) {
-				my $ret = $self->_send(@{$msg}, $to, $cv);
+		if (@{ $self->{buffers} }) {
+			while (my $entry = shift @{$self->{buffers}}) {
+				my ($msg, $to, $cv) = @{$entry};
+				my $ret = $self->_send($msg, $to, $cv);
 				if (not defined $ret) {
-					unshift @{$self->{buffers}}, $msg;
-					$self->on_error->($self->{fh}, 1, "$!") if $! != EAGAIN and $! != EWOULDBLOCK;
+					unshift @{$self->{buffers}}, $entry;
+					$self->on_error->($self->{fh}, 1, "$!") if !$non_fatal{$! + 0};
 					last;
 				}
 			}
 		}
 		else {
 			delete $self->{writer};
-			$self->on_drain->($self);
+			$self->_drained;
 		}
 	};
 	return $condvar;
@@ -223,7 +241,7 @@ AnyEvent::Handle::UDP - client/server UDP handles for AnyEvent
 
 =head1 VERSION
 
-version 0.032
+version 0.033
 
 =head1 DESCRIPTION
 
@@ -242,6 +260,10 @@ The callback for when an error occurs. It takes three arguments: the handle, a b
 =head2 on_drain
 
 This sets the callback that is called when the send buffer becomes empty. The callback takes the handle as its only argument.
+
+=head2 autoflush
+
+Always attempt to send data to the operating system immediately, without waiting for the loop to indicate the filehandle is write-ready.
 
 =head2 receive_size
 
@@ -283,9 +305,9 @@ Bind to the specified addres. Note that a bound socket may be rebound to another
 
 Connect to the specified address. Note that a connected socket may be reconnected to another address. C<$address> must be in the same form as the connect argument to new.
 
-=head2 push_send($message, $to?)
+=head2 push_send($message, $to = undef, $cv = AnyEvent::CondVar->new)
 
-Try to send a message. If a socket is not connected a receptient address must also be given. If it is connected giving a receptient may not work as expected, depending on your platform.
+Try to send a message. If a socket is not connected a receptient address must also be given. If it is connected giving a receptient may not work as expected, depending on your platform. It returns C<$cv>, which will become true when C<$message> is sent.
 
 =head2 destroy
 

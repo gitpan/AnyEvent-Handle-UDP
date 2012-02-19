@@ -34,4 +34,4 @@ requires:
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=AnyEvent-Handle-UDP
   repository: git://github.com/Leont/anyevent-handle-udp.git
-version: 0.032
+version: 0.033
