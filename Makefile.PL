@@ -15,7 +15,8 @@ my %WriteMakefileArgs = (
     "File::Find" => 0,
     "File::Temp" => 0,
     "IO::Socket::INET" => 0,
-    "Test::More" => 0
+    "Test::Exception" => 0,
+    "Test::More" => "0.89"
   },
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => "6.30"
@@ -34,12 +35,13 @@ my %WriteMakefileArgs = (
     "Moo" => 0,
     "Scalar::Util" => 0,
     "Socket" => 0,
+    "Sub::Name" => 0,
     "Symbol" => 0,
     "namespace::clean" => 0,
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.033",
+  "VERSION" => "0.034",
   "test" => {
     "TESTS" => "t/*.t"
   }
