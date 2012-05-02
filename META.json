@@ -20,17 +20,18 @@
          }
       },
       "runtime" : {
+         "recommends" : {
+            "Sub::Name" : "0"
+         },
          "requires" : {
             "AnyEvent" : "0",
             "AnyEvent::Socket" : "0",
             "AnyEvent::Util" : "0",
             "Carp" : "0",
-            "Const::Fast" : "0",
             "Errno" : "0",
             "Moo" : "0",
             "Scalar::Util" : "0",
             "Socket" : "0",
-            "Sub::Name" : "0",
             "Symbol" : "0",
             "namespace::clean" : "0",
             "perl" : "5.006",
@@ -60,6 +61,6 @@
          "web" : "http://github.com/Leont/anyevent-handle-udp"
       }
    },
-   "version" : "0.034"
+   "version" : "0.035"
 }
 

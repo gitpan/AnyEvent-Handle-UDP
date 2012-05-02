@@ -30,18 +30,16 @@ my %WriteMakefileArgs = (
     "AnyEvent::Socket" => 0,
     "AnyEvent::Util" => 0,
     "Carp" => 0,
-    "Const::Fast" => 0,
     "Errno" => 0,
     "Moo" => 0,
     "Scalar::Util" => 0,
     "Socket" => 0,
-    "Sub::Name" => 0,
     "Symbol" => 0,
     "namespace::clean" => 0,
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.034",
+  "VERSION" => "0.035",
   "test" => {
     "TESTS" => "t/*.t"
   }

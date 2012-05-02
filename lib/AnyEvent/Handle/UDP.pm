@@ -1,6 +1,6 @@
 package AnyEvent::Handle::UDP;
 {
-  $AnyEvent::Handle::UDP::VERSION = '0.034';
+  $AnyEvent::Handle::UDP::VERSION = '0.035';
 }
 use strict;
 use warnings FATAL => 'all';
@@ -12,16 +12,15 @@ use AnyEvent::Util qw/fh_nonblocking/;
 use AnyEvent::Socket qw/parse_address/;
 
 use Carp qw/croak/;
-use Const::Fast qw/const/;
 use Errno qw/EAGAIN EWOULDBLOCK EINTR ETIMEDOUT/;
 use Scalar::Util qw/reftype looks_like_number weaken/;
 use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY/;
-use Sub::Name;
 use Symbol qw/gensym/;
 
+BEGIN {
+	*subname = eval { require Sub::Name } ? \&Sub::Name::subname : sub { $_[1] };
+}
 use namespace::clean;
-
-const my $default_recv_size => 1500;
 
 has fh => (
 	is => 'ro',
@@ -81,7 +80,7 @@ has on_error => (
 has receive_size => (
 	is => 'rw',
 	isa => sub { int $_[0] eq $_[0] },
-	default => sub { $default_recv_size },
+	default => sub { 1500 },
 );
 
 has family => (
@@ -322,7 +321,7 @@ AnyEvent::Handle::UDP - client/server UDP handles for AnyEvent
 
 =head1 VERSION
 
-version 0.034
+version 0.035
 
 =head1 DESCRIPTION
 
@@ -426,7 +425,7 @@ Destroy the handle.
 
 =head1 BACKWARDS COMPATIBILITY
 
-This module is B<not> backwards compatible in any way with the previous module of the same name by Jan Henning Thorsen. That module was broken by AnyEvent itself and now considered defunct.
+This module is B<not> backwards compatible in any way with the defunct previous module of the same name by Jan Henning Thorsen. 
 
 =for Pod::Coverage BUILD
 =end
