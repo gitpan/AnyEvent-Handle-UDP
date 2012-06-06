@@ -4,7 +4,7 @@
       "Leon Timmermans <leont@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300006, CPAN::Meta::Converter version 2.120920",
+   "generated_by" : "Dist::Zilla version 4.300016, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -61,6 +61,6 @@
          "web" : "http://github.com/Leont/anyevent-handle-udp"
       }
    },
-   "version" : "0.035"
+   "version" : "0.036"
 }
 

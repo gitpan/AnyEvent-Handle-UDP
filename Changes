@@ -1,5 +1,10 @@
 Revision history for AnyEvent-Handle-UDP
 
+0.036     2012-06-06 19:23:18 Europe/Amsterdam
+          Make fh an IO::Socket object
+          Don't insist on port number in tests
+          Refactor bind/connect logic
+
 0.035     2012-05-02 23:15:17 Europe/Amsterdam
           Make dependency on Sub::Name optional
           Stop depending on Const::Fast
