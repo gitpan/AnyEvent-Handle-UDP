@@ -44,7 +44,7 @@
             "File::Find" : "0",
             "File::Temp" : "0",
             "IO::Socket::INET" : "0",
-            "Test::Exception" : "0",
+            "Test::Fatal" : "0",
             "Test::More" : "0.89"
          }
       }
@@ -61,6 +61,6 @@
          "web" : "http://github.com/Leont/anyevent-handle-udp"
       }
    },
-   "version" : "0.037"
+   "version" : "0.038"
 }
 

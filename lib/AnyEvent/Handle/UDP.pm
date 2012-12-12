@@ -1,6 +1,6 @@
 package AnyEvent::Handle::UDP;
 {
-  $AnyEvent::Handle::UDP::VERSION = '0.037';
+  $AnyEvent::Handle::UDP::VERSION = '0.038';
 }
 use strict;
 use warnings FATAL => 'all';
@@ -14,8 +14,7 @@ use AnyEvent::Socket qw/parse_address/;
 use Carp qw/croak/;
 use Errno qw/EAGAIN EWOULDBLOCK EINTR ETIMEDOUT/;
 use Scalar::Util qw/reftype looks_like_number weaken openhandle/;
-use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY AF_INET sockaddr_family/;
-BEGIN { *AF_INET6 = defined &Socket::AF_INET6 ? \&Socket::AF_INET6 : sub () { -1 } }
+use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY AF_INET AF_INET6 sockaddr_family/;
 use Symbol qw/gensym/;
 
 BEGIN {
@@ -192,9 +191,10 @@ for my $dir ('', 'r', 'w') {
 		isa => sub { ref($_[0]) eq 'CODE' },
 	);
 	no strict 'refs';
-	*{$timeout_reset} = subname $timeout_reset, sub {
-		$activity = AE::now;
-	};
+	*{$timeout_reset} = subname($timeout_reset, sub {
+		my $self = shift;
+		$self->$activity(AE::now);
+	});
 }
 
 sub bind_to {
@@ -252,7 +252,7 @@ sub _get_family {
 	my $fh = shift;
 	return if !openhandle($fh) || !getsockname $fh;
 	my $family = sockaddr_family(getsockname $fh);
-	return $family == AF_INET ? 4 : $family == AF_INET6 ? 6 : 0;
+	return +($family == AF_INET) ? 4 : $family == AF_INET6 ? 6 : 0;
 }
 
 sub _on_addr {
@@ -345,7 +345,7 @@ sub destroy {
 # ABSTRACT: client/server UDP handles for AnyEvent
 
 
-
+__END__
 =pod
 
 =head1 NAME
@@ -354,7 +354,7 @@ AnyEvent::Handle::UDP - client/server UDP handles for AnyEvent
 
 =head1 VERSION
 
-version 0.037
+version 0.038
 
 =head1 DESCRIPTION
 
@@ -483,7 +483,4 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-
-__END__
 

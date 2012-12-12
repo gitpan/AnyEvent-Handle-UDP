@@ -15,7 +15,7 @@ my %WriteMakefileArgs = (
     "File::Find" => 0,
     "File::Temp" => 0,
     "IO::Socket::INET" => 0,
-    "Test::Exception" => 0,
+    "Test::Fatal" => 0,
     "Test::More" => "0.89"
   },
   "CONFIGURE_REQUIRES" => {
@@ -39,7 +39,7 @@ my %WriteMakefileArgs = (
     "strict" => 0,
     "warnings" => 0
   },
-  "VERSION" => "0.037",
+  "VERSION" => "0.038",
   "test" => {
     "TESTS" => "t/*.t"
   }
