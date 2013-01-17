@@ -1,7 +1,7 @@
 
 
 This archive contains the distribution AnyEvent-Handle-UDP,
-version 0.038:
+version 0.039:
 
   client/server UDP handles for AnyEvent
 

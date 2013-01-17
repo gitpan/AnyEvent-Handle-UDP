@@ -1,6 +1,6 @@
 package AnyEvent::Handle::UDP;
 {
-  $AnyEvent::Handle::UDP::VERSION = '0.038';
+  $AnyEvent::Handle::UDP::VERSION = '0.039';
 }
 use strict;
 use warnings FATAL => 'all';
@@ -136,6 +136,7 @@ for my $dir ('', 'r', 'w') {
 
 	has $timer => (
 		is => 'rw',
+		init_arg => undef,
 		clearer => $clear_timer,
 	);
 
@@ -183,6 +184,7 @@ for my $dir ('', 'r', 'w') {
 	);
 	has $activity => (
 		is => 'rw',
+		init_arg => undef,
 		default => sub { AE::now },
 	);
 
@@ -225,7 +227,7 @@ sub _bind_to {
 
 sub connect_to {
 	my ($self, $addr) = @_;
-	return $self->($self->fh, $addr);
+	return $self->_connect_to($self->fh, $addr);
 }
 
 sub _connect_to {
@@ -252,7 +254,7 @@ sub _get_family {
 	my $fh = shift;
 	return if !openhandle($fh) || !getsockname $fh;
 	my $family = sockaddr_family(getsockname $fh);
-	return +($family == AF_INET) ? 4 : $family == AF_INET6 ? 6 : 0;
+	return +($family == AF_INET) ? 4 : ($family == AF_INET6) ? 6 : 0;
 }
 
 sub _on_addr {
@@ -354,7 +356,17 @@ AnyEvent::Handle::UDP - client/server UDP handles for AnyEvent
 
 =head1 VERSION
 
-version 0.038
+version 0.039
+
+=head1 SYNOPSIS
+
+ my $echo_server = AnyEvent::Handle::UDP->new(
+     bind => ['0.0.0.0', 4000],
+     on_recv => sub {
+         my ($data, $ae_handle, $client_addr) = @_;
+         $ae_handle->push_send($data, $client_addr);
+     },
+ );
 
 =head1 DESCRIPTION
 
@@ -388,7 +400,7 @@ Sets the socket family. The default is C<0>, which means either IPv4 or IPv6. Th
 
 =head2 fh
 
-The underlying filehandle.
+The underlying filehandle. Note that this doesn't cooperate with the C<connect> and C<bind> parameters.
 
 =head2 timeout
 
@@ -430,7 +442,7 @@ The address to bind the socket to. It must be either a packed sockaddr struct or
 
 =back
 
-All are optional, though using either C<connect> or C<bind> (or both) is strongly recommended unless you give it a connected/bound C<fh>.
+All except C<on_recv> are optional, though using either C<connect> or C<bind> (or both) is strongly recommended unless you give it a connected/bound C<fh>.
 
 =head2 bind_to($address)
 

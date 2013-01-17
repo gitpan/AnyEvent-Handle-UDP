@@ -7,6 +7,7 @@ META.yml
 Makefile.PL
 README
 dist.ini
+examples/anyevent-udp-server.pl
 lib/AnyEvent/Handle/UDP.pm
 t/00-compile.t
 t/10-basics.t
