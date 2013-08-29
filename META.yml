@@ -11,7 +11,7 @@ build_requires:
 configure_requires:
   ExtUtils::MakeMaker: 6.30
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.300028, CPAN::Meta::Converter version 2.120921'
+generated_by: 'Dist::Zilla version 4.300035, CPAN::Meta::Converter version 2.120921'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -24,11 +24,9 @@ requires:
   AnyEvent::Socket: 0
   AnyEvent::Util: 0
   Carp: 0
-  Errno: 0
   Moo: 0
   Scalar::Util: 0
   Socket: 0
-  Sub::Name: 0
   Symbol: 0
   namespace::clean: 0
   perl: 5.006
@@ -37,4 +35,4 @@ requires:
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=AnyEvent-Handle-UDP
   repository: git://github.com/Leont/anyevent-handle-udp.git
-version: 0.039
+version: 0.040
