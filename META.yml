@@ -9,7 +9,7 @@ build_requires:
   Test::Fatal: 0
   Test::More: 0.89
 configure_requires:
-  ExtUtils::MakeMaker: 6.30
+  Module::Build::Tiny: 0.026
 dynamic_config: 0
 generated_by: 'Dist::Zilla version 4.300035, CPAN::Meta::Converter version 2.120921'
 license: perl
@@ -35,4 +35,4 @@ requires:
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=AnyEvent-Handle-UDP
   repository: git://github.com/Leont/anyevent-handle-udp.git
-version: 0.040
+version: 0.041

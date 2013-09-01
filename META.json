@@ -16,7 +16,7 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "ExtUtils::MakeMaker" : "6.30"
+            "Module::Build::Tiny" : "0.026"
          }
       },
       "develop" : {
@@ -67,6 +67,6 @@
          "web" : "https://github.com/Leont/anyevent-handle-udp"
       }
    },
-   "version" : "0.040"
+   "version" : "0.041"
 }
 
