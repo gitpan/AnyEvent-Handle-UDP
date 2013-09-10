@@ -3,15 +3,15 @@ abstract: 'client/server UDP handles for AnyEvent'
 author:
   - 'Leon Timmermans <leont@cpan.org>'
 build_requires:
-  File::Find: 0
-  File::Temp: 0
+  IO::Handle: 0
   IO::Socket::INET: 0
+  IPC::Open3: 0
   Test::Fatal: 0
   Test::More: 0.89
 configure_requires:
-  Module::Build::Tiny: 0.026
+  Module::Build::Tiny: 0.027
 dynamic_config: 0
-generated_by: 'Dist::Zilla version 4.300035, CPAN::Meta::Converter version 2.120921'
+generated_by: 'Dist::Zilla version 4.300038, CPAN::Meta::Converter version 2.132140'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -24,7 +24,7 @@ requires:
   AnyEvent::Socket: 0
   AnyEvent::Util: 0
   Carp: 0
-  Moo: 0
+  Moo: 1.001000
   Scalar::Util: 0
   Socket: 0
   Symbol: 0
@@ -35,4 +35,4 @@ requires:
 resources:
   bugtracker: http://rt.cpan.org/Public/Dist/Display.html?Name=AnyEvent-Handle-UDP
   repository: git://github.com/Leont/anyevent-handle-udp.git
-version: 0.041
+version: 0.042

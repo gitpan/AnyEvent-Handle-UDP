@@ -1,11 +1,11 @@
 package AnyEvent::Handle::UDP;
 {
-  $AnyEvent::Handle::UDP::VERSION = '0.041';
+  $AnyEvent::Handle::UDP::VERSION = '0.042';
 }
 use strict;
 use warnings FATAL => 'all';
 
-use Moo;
+use Moo 1.001000;
 
 use AnyEvent qw//;
 use AnyEvent::Util qw/fh_nonblocking/;
@@ -57,6 +57,8 @@ has _reader => (
 	init_arg => undef,
 );
 
+my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
+
 sub _build__reader {
 	my $self = shift;
 	return AE::io($self->fh, 0, sub {
@@ -65,7 +67,7 @@ sub _build__reader {
 			$self->rtimeout_reset;
 			$self->on_recv->($buffer, $self, $addr);
 		}
-		$self->_error(1, "Couldn't recv: $!") if $! != EAGAIN and $! != EWOULDBLOCK;
+		$self->_error(1, "Couldn't recv: $!") if not $non_fatal{$! + 0};
 		return;
 	});
 }
@@ -290,8 +292,6 @@ sub _error {
 	return;
 }
 
-my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
-
 sub push_send {
 	my ($self, $message, $to, $cv) = @_;
 	$to = AnyEvent::Socket::pack_sockaddr($to->[1], defined $to->[0] ? parse_address($to->[0]) : INADDR_ANY) if ref $to;
@@ -361,7 +361,7 @@ AnyEvent::Handle::UDP - client/server UDP handles for AnyEvent
 
 =head1 VERSION
 
-version 0.041
+version 0.042
 
 =head1 SYNOPSIS
 
