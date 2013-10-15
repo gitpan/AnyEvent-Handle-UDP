@@ -4,7 +4,7 @@
       "Leon Timmermans <leont@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300038, CPAN::Meta::Converter version 2.132140",
+   "generated_by" : "Dist::Zilla version 4.300038, CPAN::Meta::Converter version 2.120921",
    "license" : [
       "perl_5"
    ],
@@ -16,7 +16,7 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "Module::Build::Tiny" : "0.027"
+            "Module::Build::Tiny" : "0.030"
          }
       },
       "develop" : {
@@ -47,12 +47,19 @@
       },
       "test" : {
          "requires" : {
+            "File::Spec" : "0",
             "IO::Handle" : "0",
             "IO::Socket::INET" : "0",
             "IPC::Open3" : "0",
             "Test::Fatal" : "0",
             "Test::More" : "0.89"
          }
+      }
+   },
+   "provides" : {
+      "AnyEvent::Handle::UDP" : {
+         "file" : "lib/AnyEvent/Handle/UDP.pm",
+         "version" : "0.043"
       }
    },
    "release_status" : "stable",
@@ -67,6 +74,6 @@
          "web" : "https://github.com/Leont/anyevent-handle-udp"
       }
    },
-   "version" : "0.042"
+   "version" : "0.043"
 }
 
